@@ -1,0 +1,4055 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control TI | Monitoreo y Análisis en Tiempo Real</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #011E3C 0%, #011F40 50%, #093866 100%);
+            --dark-gradient: linear-gradient(135deg, #011E3C 0%, #093866 100%);
+            --accent-blue: #093866;
+            --accent-purple: #011F40;
+            --accent-green: #2ecc71;
+            --accent-orange: #f39c12;
+            --accent-red: #e74c3c;
+            --text-primary: #011E3C;
+            --text-secondary: #093866;
+            --bg-primary: #f8f9fa;
+            --bg-card: #ffffff;
+            --border-color: rgba(1, 30, 60, 0.1);
+            --shadow-sm: 0 2px 4px rgba(1, 30, 60, 0.1);
+            --shadow-md: 0 4px 6px rgba(1, 30, 60, 0.1);
+            --shadow-lg: 0 10px 15px rgba(1, 30, 60, 0.15);
+            --shadow-xl: 0 20px 25px rgba(1, 30, 60, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .dashboard-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, #011E3C 0%, #011F40 50%, #093866 100%);
+            color: white;
+            padding: 1rem 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+
+        .header-title {
+            font-family: 'Orbitron', 'JetBrains Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            line-height: 1;
+            margin: 0;
+            color: #FFFFFF;
+            text-transform: uppercase;
+        }
+
+        .header-subtitle {
+            font-size: 0.75rem;
+            opacity: 0.85;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0;
+            letter-spacing: 0.02em;
+        }
+
+        .header-credit {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0.1rem 0 0 0;
+            font-style: italic;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .timestamp {
+            font-size: 0.7rem;
+            font-weight: 500;
+            opacity: 0.9;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: right;
+            line-height: 1.2;
+            letter-spacing: 0.02em;
+        }
+
+        /* Navigation Styles */
+        .navigation {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-tab {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            color: var(--text-secondary);
+            position: relative;
+        }
+
+        .nav-tab:hover {
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--accent-blue);
+            border-color: rgba(52, 152, 219, 0.2);
+        }
+
+        .nav-tab.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+            box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+        }
+
+        .nav-tab i {
+            font-size: 0.9rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--accent-blue);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-blue);
+        }
+
+        .kpi-card.success::before { background: var(--accent-green); }
+        .kpi-card.warning::before { background: var(--accent-orange); }
+        .kpi-card.danger::before { background: var(--accent-red); }
+        .kpi-card.purple::before { background: var(--accent-purple); }
+
+        .kpi-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+            background: var(--accent-blue);
+        }
+
+        .kpi-card.success .kpi-icon { background: var(--accent-green); }
+        .kpi-card.warning .kpi-icon { background: var(--accent-orange); }
+        .kpi-card.danger .kpi-icon { background: var(--accent-red); }
+        .kpi-card.purple .kpi-icon { background: var(--accent-purple); }
+
+        .kpi-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+        }
+
+        .kpi-trend.up {
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--accent-green);
+        }
+
+        .kpi-trend.down {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--accent-red);
+        }
+
+        .kpi-trend.stable {
+            background: rgba(127, 140, 141, 0.1);
+            color: var(--text-secondary);
+        }
+
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.3rem;
+        }
+
+        .kpi-description {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Chart Containers */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Progress Bars Grid */
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .progress-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .progress-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .progress-card.warning {
+            border-left: 4px solid var(--accent-orange);
+        }
+
+        .progress-card.danger {
+            border-left: 4px solid var(--accent-red);
+        }
+
+        .progress-card.success {
+            border-left: 4px solid var(--accent-green);
+        }
+
+        .progress-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-blue);
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .progress-card.warning .progress-icon { background: var(--accent-orange); }
+        .progress-card.danger .progress-icon { background: var(--accent-red); }
+        .progress-card.success .progress-icon { background: var(--accent-green); }
+
+        .progress-info {
+            flex: 1;
+        }
+
+        .progress-info h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0 0 0.2rem 0;
+            color: var(--text-primary);
+        }
+
+        .progress-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .progress-percentage {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .progress-bar-container {
+            margin-top: 0.75rem;
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: #ecf0f1;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+
+        .progress-pending {
+            height: 100%;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .progress-threshold {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e74c3c;
+            z-index: 2;
+        }
+
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .threshold-label, .pending-label, .risk-label, .ok-label {
+            font-weight: 600;
+            font-size: 0.65rem;
+        }
+
+        .threshold-label { color: var(--accent-orange); }
+        .pending-label { color: var(--accent-orange); }
+        .risk-label { color: var(--accent-red); }
+        .ok-label { color: var(--accent-green); }
+
+        /* Critical Summary */
+        .critical-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .critical-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .critical-card.danger {
+            border-left: 4px solid var(--accent-red);
+            background: rgba(231, 76, 60, 0.02);
+        }
+
+        .critical-card.success {
+            border-left: 4px solid var(--accent-green);
+            background: rgba(46, 204, 113, 0.02);
+        }
+
+        .critical-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .critical-header i {
+            font-size: 1.1rem;
+        }
+
+        .critical-card.danger .critical-header i { color: var(--accent-red); }
+        .critical-card.success .critical-header i { color: var(--accent-green); }
+
+        .critical-header h3 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .critical-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .critical-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .critical-icon {
+            font-size: 1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .critical-text {
+            flex: 1;
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+
+        .critical-text strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .critical-days {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            background: var(--accent-red);
+            color: white;
+            text-align: center;
+            min-width: 60px;
+        }
+
+        .critical-status {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 40px;
+        }
+
+        .critical-status.ok {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        /* Visual Status Grid */
+        .visual-status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .visual-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .visual-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .visual-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .visual-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .visual-title i {
+            color: var(--accent-blue);
+            font-size: 1.2rem;
+        }
+
+        .visual-items {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .visual-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            grid-template-rows: auto auto;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .visual-item:hover {
+            background: #f1f3f4;
+            transform: translateX(4px);
+        }
+
+        .visual-item.success {
+            border-left-color: var(--accent-green);
+            background: rgba(46, 204, 113, 0.05);
+        }
+
+        .visual-item.warning {
+            border-left-color: var(--accent-orange);
+            background: rgba(243, 156, 18, 0.05);
+        }
+
+        .visual-item.critical {
+            border-left-color: var(--accent-red);
+            background: rgba(231, 76, 60, 0.05);
+        }
+
+        .visual-icon {
+            font-size: 1.5rem;
+            grid-row: 1 / 3;
+        }
+
+        .visual-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .visual-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .visual-detail {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .visual-percentage {
+            font-size: 1.4rem;
+            font-weight: 800;
+            text-align: right;
+            grid-row: 1;
+        }
+
+        .visual-percentage.success { color: var(--accent-green); }
+        .visual-percentage.warning { color: var(--accent-orange); }
+        .visual-percentage.critical { color: var(--accent-red); }
+
+        .visual-bar {
+            grid-column: 1 / 4;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .visual-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+
+        .visual-fill.success { background: var(--accent-green); }
+        .visual-fill.warning { background: var(--accent-orange); }
+        .visual-fill.critical { background: var(--accent-red); }
+
+        /* Analysis Components */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .analysis-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .analysis-card.critical {
+            border-left: 4px solid var(--accent-red);
+            background: rgba(231, 76, 60, 0.02);
+        }
+
+        .analysis-card.success {
+            border-left: 4px solid var(--accent-green);
+            background: rgba(46, 204, 113, 0.02);
+        }
+
+        .analysis-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .analysis-header i {
+            font-size: 1.2rem;
+            color: var(--accent-blue);
+        }
+
+        .analysis-card.critical .analysis-header i {
+            color: var(--accent-red);
+        }
+
+        .analysis-card.success .analysis-header i {
+            color: var(--accent-green);
+        }
+
+        .analysis-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0;
+        }
+
+        .risk-matrix {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .risk-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            border-left: 4px solid transparent;
+        }
+
+        .risk-item.high {
+            background: rgba(231, 76, 60, 0.05);
+            border-left-color: var(--accent-red);
+        }
+
+        .risk-item.medium {
+            background: rgba(243, 156, 18, 0.05);
+            border-left-color: var(--accent-orange);
+        }
+
+        .risk-item.low {
+            background: rgba(241, 196, 15, 0.05);
+            border-left-color: #f1c40f;
+        }
+
+        .risk-indicator {
+            font-size: 1.2rem;
+            margin-top: 0.2rem;
+        }
+
+        .risk-content h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .risk-content p {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            margin: 0.25rem 0;
+            color: var(--text-secondary);
+        }
+
+        .strength-analysis {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .strength-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(46, 204, 113, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .strength-metric {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--accent-green);
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .strength-content h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .strength-content p {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            margin: 0.25rem 0;
+            color: var(--text-secondary);
+        }
+
+        .prediction-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .prediction-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .prediction-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .prediction-header i {
+            font-size: 1.2rem;
+            color: var(--accent-blue);
+        }
+
+        .prediction-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0;
+        }
+
+        .prediction-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            border-left: 4px solid transparent;
+        }
+
+        .timeline-item.critical {
+            background: rgba(231, 76, 60, 0.05);
+            border-left-color: var(--accent-red);
+        }
+
+        .timeline-item.warning {
+            background: rgba(243, 156, 18, 0.05);
+            border-left-color: var(--accent-orange);
+        }
+
+        .timeline-date {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            min-width: 60px;
+            text-align: center;
+            background: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+
+        .timeline-content h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .timeline-content p {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            margin: 0;
+            color: var(--text-secondary);
+        }
+
+        .cost-analysis {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .cost-item h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+            color: var(--text-primary);
+        }
+
+        .cost-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .cost-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .cost-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            font-size: 0.9rem;
+            border-top: 2px solid var(--accent-blue);
+            margin-top: 0.5rem;
+        }
+
+        .cost-total.success {
+            border-top-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .recommendation-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .recommendation-card.immediate {
+            border-left: 4px solid var(--accent-red);
+            background: rgba(231, 76, 60, 0.02);
+        }
+
+        .recommendation-card.short-term {
+            border-left: 4px solid var(--accent-orange);
+            background: rgba(243, 156, 18, 0.02);
+        }
+
+        .recommendation-card.strategic {
+            border-left: 4px solid var(--accent-blue);
+            background: rgba(52, 152, 219, 0.02);
+        }
+
+        .rec-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .rec-header i {
+            font-size: 1.2rem;
+        }
+
+        .recommendation-card.immediate .rec-header i {
+            color: var(--accent-red);
+        }
+
+        .recommendation-card.short-term .rec-header i {
+            color: var(--accent-orange);
+        }
+
+        .recommendation-card.strategic .rec-header i {
+            color: var(--accent-blue);
+        }
+
+        .rec-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0;
+        }
+
+        .rec-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .action-priority {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .action-priority.p1 {
+            background: var(--accent-red);
+        }
+
+        .action-priority.p2 {
+            background: var(--accent-orange);
+        }
+
+        .action-content h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .action-content p {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            margin: 0.25rem 0;
+            color: var(--text-secondary);
+        }
+
+        /* Category Grid */
+        .category-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .category-item:hover {
+            background: #f1f3f4;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .category-item.success {
+            border-left-color: var(--accent-green);
+            background: rgba(46, 204, 113, 0.05);
+        }
+
+        .category-item.warning {
+            border-left-color: var(--accent-orange);
+            background: rgba(243, 156, 18, 0.05);
+        }
+
+        .category-item.info {
+            border-left-color: var(--accent-blue);
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .category-item.critical {
+            border-left-color: var(--accent-red);
+            background: rgba(231, 76, 60, 0.05);
+        }
+
+        .category-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .category-item.success .category-icon {
+            background: var(--accent-green);
+        }
+
+        .category-item.warning .category-icon {
+            background: var(--accent-orange);
+        }
+
+        .category-item.info .category-icon {
+            background: var(--accent-blue);
+        }
+
+        .category-item.critical .category-icon {
+            background: var(--accent-red);
+        }
+
+        .category-info {
+            flex: 1;
+        }
+
+        .category-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+
+        .category-item.success .category-number { color: var(--accent-green); }
+        .category-item.warning .category-number { color: var(--accent-orange); }
+        .category-item.info .category-number { color: var(--accent-blue); }
+        .category-item.critical .category-number { color: var(--accent-red); }
+
+        .category-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .category-detail {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .category-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .summary-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .summary-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Executive Summary */
+        .executive-summary {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .summary-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .summary-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .summary-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 3px solid var(--accent-blue);
+            background: #f8f9fa;
+        }
+
+        .summary-section.success {
+            border-left-color: var(--accent-green);
+            background: rgba(46, 204, 113, 0.05);
+        }
+
+        .summary-section.warning {
+            border-left-color: var(--accent-orange);
+            background: rgba(243, 156, 18, 0.05);
+        }
+
+        .summary-section.info {
+            border-left-color: var(--accent-blue);
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .summary-section h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .summary-section ul {
+            list-style: none;
+        }
+
+        .summary-section li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .summary-section li::before {
+            content: '•';
+            color: var(--accent-blue);
+            font-weight: bold;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        /* Licensing Status Styles */
+        .licensing-status {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .license-item {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .license-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .license-header h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .license-total {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: #f8f9fa;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+        }
+
+        .license-bar-container {
+            margin-bottom: 1rem;
+        }
+
+        .license-bar {
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            margin-bottom: 0.75rem;
+        }
+
+        .license-fill {
+            height: 100%;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+
+        .license-fill.current {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        .license-fill.needed {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+
+        .license-fill.updated {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+        }
+
+        .license-fill.pending {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .license-fill.supported {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+        }
+
+        .license-fill.operational {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        .license-fill.missing {
+            background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+        }
+
+        .license-fill.active {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+        }
+
+        .license-fill.bypass {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+
+        .license-fill.disabled {
+            background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+        }
+
+        .license-labels {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            gap: 1rem;
+        }
+
+        .license-labels span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .license-labels span::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .current-label::before {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        .needed-label::before {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+
+        .updated-label::before {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+        }
+
+        .pending-label::before {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .supported-label::before {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+        }
+
+        .operational-label::before {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        .missing-label::before {
+            background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+        }
+
+        .active-label::before {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+        }
+
+        .bypass-label::before {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+
+        .disabled-label::before {
+            background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+        }
+
+        .license-status-note {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--accent-blue);
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .license-status-note.success {
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--accent-green);
+            border-left-color: var(--accent-green);
+        }
+
+        .license-status-note.warning {
+            background: rgba(243, 156, 18, 0.1);
+            color: var(--accent-orange);
+            border-left-color: var(--accent-orange);
+        }
+
+        .license-status-note i {
+            font-size: 0.9rem;
+        }
+
+        /* Status Badge Styles */
+        .status-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            margin-left: 0.5rem;
+        }
+
+        .status-badge.implemented {
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+            border: 1px solid rgba(46, 204, 113, 0.2);
+        }
+
+        .status-badge.pending {
+            background: rgba(243, 156, 18, 0.1);
+            color: #d68910;
+            border: 1px solid rgba(243, 156, 18, 0.2);
+        }
+
+        .status-badge.required {
+            background: rgba(231, 76, 60, 0.1);
+            color: #c0392b;
+            border: 1px solid rgba(231, 76, 60, 0.2);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .header {
+                padding: 1.5rem 0;
+            }
+
+            .header-top {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .header-right {
+                flex-direction: row;
+                justify-content: center;
+                gap: 1rem;
+            }
+
+            .header-title {
+                font-size: 2rem;
+            }
+
+            .nav-tabs {
+                justify-content: flex-start;
+                gap: 0.25rem;
+            }
+
+            .nav-tab {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            .nav-tab i {
+                font-size: 1rem;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem 0;
+            }
+
+            .main-content {
+                padding: 1.5rem 1rem;
+            }
+
+            .header-content {
+                padding: 0 1rem;
+            }
+
+            .nav-container {
+                padding: 0 1rem;
+            }
+
+            .header-title {
+                font-size: 1.8rem;
+            }
+
+            .header-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .timestamp {
+                font-size: 0.8rem;
+            }
+
+            .nav-tabs {
+                padding: 0.75rem 0;
+            }
+
+            .progress-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-card {
+                padding: 1rem;
+            }
+
+            .critical-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .visual-status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .category-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .category-summary {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .executive-summary {
+                padding: 1.5rem;
+            }
+
+            .summary-title {
+                font-size: 1.6rem;
+            }
+
+            .critical-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .critical-days, .critical-status {
+                align-self: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-top">
+                    <div class="header-left">
+                        <h1 class="header-title">Panel de Control TI</h1>
+                        <p class="header-subtitle">Monitoreo y Análisis en Tiempo Real</p>
+                        <p class="header-credit">Desarrollado por Ing. Camilo Serrano Q - Gerente TI</p>
+                    </div>
+                    <div class="header-right">
+                        <div class="timestamp">7 de Septiembre, 2025 a las 08:58 PM GMT-5</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="navigation">
+            <div class="nav-container">
+                <div class="nav-tabs">
+                    <button class="nav-tab active" onclick="showSection('infrastructure')">
+                        <i class="fas fa-server"></i>
+                        <span>Infraestructura</span>
+                    </button>
+                    <button class="nav-tab" onclick="showSection('powerbi')">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Power BI</span>
+                    </button>
+                    <button class="nav-tab" onclick="showSection('development')">
+                        <i class="fas fa-code"></i>
+                        <span>Desarrollo</span>
+                    </button>
+                    <button class="nav-tab" onclick="showSection('networks')">
+                        <i class="fas fa-network-wired"></i>
+                        <span>Redes</span>
+                    </button>
+                    <button class="nav-tab" onclick="showSection('security')">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Ciberseguridad</span>
+                    </button>
+                    <button class="nav-tab" onclick="showSection('summary')">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Informe Ejecutivo</span>
+                    </button>
+                    <button class="nav-tab" onclick="showSection('conclusions')">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Conclusiones y Análisis</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Infrastructure Analysis -->
+            <section id="infrastructure" class="section active">
+                <!-- Risk Analysis Matrix -->
+                <div class="analysis-grid">
+                    <div class="analysis-card critical">
+                        <div class="analysis-header">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>ANÁLISIS DE RIESGO CRÍTICO</h3>
+                        </div>
+                        <div class="risk-matrix">
+                            <div class="risk-item medium">
+                                <div class="risk-indicator">🟠</div>
+                                <div class="risk-content">
+                                    <h4>Almacenamiento: Mitigación Implementada</h4>
+                                    <p><strong>Estado:</strong> Disco de 14TB adquirido como solución temporal</p>
+                                    <p><strong>Capacidad Actual:</strong> 81% (38/47 TB) → 62% (38/61 TB) post-instalación</p>
+                                    <p><strong>Ventana de Seguridad:</strong> +6 meses hasta nueva infraestructura</p>
+                                </div>
+                            </div>
+                            <div class="risk-item medium">
+                                <div class="risk-indicator">🟠</div>
+                                <div class="risk-content">
+                                    <h4>Switches Legacy: Obsolescencia Programada</h4>
+                                    <p><strong>Impacto:</strong> Degradación gradual de conectividad</p>
+                                    <p><strong>Probabilidad:</strong> 70% de fallas en próximos 6 meses</p>
+                                    <p><strong>Ventana de Acción:</strong> RFP completado en 8 días</p>
+                                </div>
+                            </div>
+                            <div class="risk-item low">
+                                <div class="risk-indicator">🟡</div>
+                                <div class="risk-content">
+                                    <h4>UPS: Riesgo Controlado</h4>
+                                    <p><strong>Impacto:</strong> Vulnerabilidad durante cortes eléctricos</p>
+                                    <p><strong>Probabilidad:</strong> 30% - Cronograma definido</p>
+                                    <p><strong>Mitigación:</strong> 2 UPS programadas 8-9 Sep</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-card success">
+                        <div class="analysis-header">
+                            <i class="fas fa-chart-line"></i>
+                            <h3>ANÁLISIS DE FORTALEZAS OPERACIONALES</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">97%</div>
+                                <div class="strength-content">
+                                    <h4>Excelencia en Mantenimiento de Seguridad</h4>
+                                    <p><strong>8 actualizaciones Ene-Sep</strong> vs. 6 estándar industrial | <strong>33/34 servidores</strong> actualizados</p>
+                                    <p><strong>Respuesta:</strong> 48h | <strong>Cero brechas</strong> 2024</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">95%</div>
+                                <div class="strength-content">
+                                    <h4>Infraestructura de Climatización Óptima</h4>
+                                    <p><strong>36/38 aires</strong> con mantenimiento | <strong>99.2% tiempo</strong> en rango 18-24°C</p>
+                                    <p><strong>Reduce fallas:</strong> 85% | <strong>Vida útil:</strong> +3-5 años</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">85%</div>
+                                <div class="strength-content">
+                                    <h4>Adopción VPN: Habilitador de Trabajo Híbrido</h4>
+                                    <p><strong>308/363 usuarios</strong> activos | <strong>45ms latencia</strong> | <strong>99.7% disponibilidad</strong></p>
+                                    <p><strong>Modelo 3+2:</strong> +15% satisfacción | <strong>+12% eficiencia</strong></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Predictive Analysis -->
+                <div class="prediction-grid">
+                    <div class="prediction-card">
+                        <div class="prediction-header">
+                            <i class="fas fa-crystal-ball"></i>
+                            <h3>PROYECCIÓN DE CAPACIDAD - PRÓXIMOS 90 DÍAS</h3>
+                        </div>
+                        <div class="prediction-timeline">
+                            <div class="timeline-item warning">
+                                <div class="timeline-date">Sep 15</div>
+                                <div class="timeline-content">
+                                    <h4>Instalación Disco 14TB</h4>
+                                    <p>Capacidad expandida de 47TB → 61TB. Uso reducido al 62%.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item warning">
+                                <div class="timeline-date">Dic 2024</div>
+                                <div class="timeline-content">
+                                    <h4>Almacenamiento: 70% (42.7TB/61TB)</h4>
+                                    <p>Crecimiento controlado. Margen de seguridad mantenido.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item warning">
+                                <div class="timeline-date">Mar 2025</div>
+                                <div class="timeline-content">
+                                    <h4>Nueva Infraestructura</h4>
+                                    <p>Implementación de solución definitiva antes del 80% de uso.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prediction-card">
+                        <div class="prediction-header">
+                            <i class="fas fa-chart-bar"></i>
+                            <h3>ESTADO DE LICENCIAMIENTO MICROSOFT</h3>
+                        </div>
+                        <div class="licensing-status">
+                            <div class="license-item">
+                                <div class="license-header">
+                                    <h4>📧 Correo y Microsoft 365</h4>
+                                    <span class="license-total">705 buzones totales</span>
+                                </div>
+                                <div class="license-bar-container">
+                                    <div class="license-bar">
+                                        <div class="license-fill current" style="width: 49.2%"></div>
+                                        <div class="license-fill needed" style="width: 50.8%"></div>
+                                    </div>
+                                    <div class="license-labels">
+                                        <span class="current-label">347 On-Prem (49.2%)</span>
+                                        <span class="needed-label">358 Necesitan 365 (50.8%)</span>
+                                    </div>
+                                </div>
+                                <div class="license-status-note">
+                                    <i class="fas fa-info-circle"></i>
+                                    Exchange On-Prem operativo hasta 14-Oct-2025
+                                </div>
+                            </div>
+
+                            <div class="license-item">
+                                <div class="license-header">
+                                    <h4>🖥️ Servidores Windows</h4>
+                                    <span class="license-total">34 servidores totales</span>
+                                </div>
+                                <div class="license-bar-container">
+                                    <div class="license-bar">
+                                        <div class="license-fill updated" style="width: 97%"></div>
+                                        <div class="license-fill pending" style="width: 3%"></div>
+                                    </div>
+                                    <div class="license-labels">
+                                        <span class="updated-label">33 Actualizados (97%)</span>
+                                        <span class="pending-label">1 Pendiente (3%)</span>
+                                    </div>
+                                </div>
+                                <div class="license-status-note warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Windows Server 2012 R2 / AX - RIESGO TECNOLÓGICO (EoS)
+                                </div>
+                            </div>
+
+                            <div class="license-item">
+                                <div class="license-header">
+                                    <h4>🔥 Firewalls Cisco</h4>
+                                    <span class="license-total">3 firewalls activos</span>
+                                </div>
+                                <div class="license-bar-container">
+                                    <div class="license-bar">
+                                        <div class="license-fill supported" style="width: 100%"></div>
+                                    </div>
+                                    <div class="license-labels">
+                                        <span class="supported-label">Smart Licensing vigente hasta 2028 (100%)</span>
+                                    </div>
+                                </div>
+                                <div class="license-status-note success">
+                                    <i class="fas fa-check-circle"></i>
+                                    Firepower 1140 (x2) y 1120 (x1) - Soporte hasta Mar/May 2028
+                                </div>
+                            </div>
+
+                            <div class="license-item">
+                                <div class="license-header">
+                                    <h4>💾 Backups Veeam</h4>
+                                    <span class="license-total">22 registros, 16 entornos</span>
+                                </div>
+                                <div class="license-bar-container">
+                                    <div class="license-bar">
+                                        <div class="license-fill operational" style="width: 72.7%"></div>
+                                        <div class="license-fill missing" style="width: 27.3%"></div>
+                                    </div>
+                                    <div class="license-labels">
+                                        <span class="operational-label">16 Entornos operativos (72.7%)</span>
+                                        <span class="missing-label">Inventario licencias faltante (27.3%)</span>
+                                    </div>
+                                </div>
+                                <div class="license-status-note warning">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    Requiere inventario: tipo licencia, modelo, instancias, expiración
+                                </div>
+                            </div>
+
+                            <div class="license-item">
+                                <div class="license-header">
+                                    <h4>🔐 VPN SSL</h4>
+                                    <span class="license-total">363 usuarios totales</span>
+                                </div>
+                                <div class="license-bar-container">
+                                    <div class="license-bar">
+                                        <div class="license-fill active" style="width: 84.8%"></div>
+                                        <div class="license-fill bypass" style="width: 11.3%"></div>
+                                        <div class="license-fill disabled" style="width: 3.9%"></div>
+                                    </div>
+                                    <div class="license-labels">
+                                        <span class="active-label">308 Activos (84.8%)</span>
+                                        <span class="bypass-label">41 Bypass (11.3%)</span>
+                                        <span class="disabled-label">14 Deshabilitados (3.9%)</span>
+                                    </div>
+                                </div>
+                                <div class="license-status-note">
+                                    <i class="fas fa-info-circle"></i>
+                                    Licenciamiento SSL/VPN concurrente - Revisar política bypass
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maintenance Activities Performed -->
+                <div class="analysis-grid">
+                    <div class="analysis-card success">
+                        <div class="analysis-header">
+                            <i class="fas fa-tools"></i>
+                            <h3>MANTENIMIENTOS REALIZADOS 2025</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">🏢</div>
+                                <div class="strength-content">
+                                    <h4>Piso 5 (Julio 2025) - Rack Principal</h4>
+                                    <p><strong>✅ Completado:</strong> Validación 4 switches HPE Aruba | Limpieza profunda rack y UPS</p>
+                                    <p><strong>Mejoras:</strong> Marquillado y peinado cableado | Backup configuraciones | Tabla detallada puertos</p>
+                                    <p><strong>Resultado:</strong> Validaciones funcionales equipos usuarios - 100% operativo</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🏢</div>
+                                <div class="strength-content">
+                                    <h4>Piso 4 (Abril 2025) - Infraestructura Crítica</h4>
+                                    <p><strong>✅ Completado:</strong> Validación 2 switches HPE Aruba (48 puertos) | Limpieza rack y UPS</p>
+                                    <p><strong>⚠️ Riesgo Identificado:</strong> Switch sostenido solo por parte frontal - Requiere soporte estructural</p>
+                                    <p><strong>Mejoras:</strong> Marquillado cables | Tabla correspondencia puertos | Pruebas funcionales usuarios</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🏢</div>
+                                <div class="strength-content">
+                                    <h4>Piso 2 (Abril 2025) - Consolidación de Red</h4>
+                                    <p><strong>✅ Completado:</strong> Validación 2 switches HPE Aruba (48 puertos) | Limpieza integral rack</p>
+                                    <p><strong>⚠️ Riesgo Detectado:</strong> Switch con soporte frontal únicamente - Programar refuerzo estructural</p>
+                                    <p><strong>Documentación:</strong> Backup configuraciones | Verificación puertos funcionales/vacíos | Validación equipos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-card success">
+                        <div class="analysis-header">
+                            <i class="fas fa-chart-line"></i>
+                            <h3>AVANCES Y MEJORAS CONSEGUIDAS</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">📋</div>
+                                <div class="strength-content">
+                                    <h4>Trazabilidad y Organización Total</h4>
+                                    <p><strong>Logro:</strong> Cada switch y puerto identificado y documentado</p>
+                                    <p><strong>Beneficio:</strong> Facilita soporte técnico y escalamiento futuro | Reducción 60% tiempo diagnóstico</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🧹</div>
+                                <div class="strength-content">
+                                    <h4>Mejoras en Higiene y Ambiente Controlado</h4>
+                                    <p><strong>Resultado:</strong> Racks y cuartos comunicaciones libres de polvo</p>
+                                    <p><strong>Impacto:</strong> Validaciones ventilación | Extensión vida útil equipos +2-3 años</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">💾</div>
+                                <div class="strength-content">
+                                    <h4>Continuidad Operativa Garantizada</h4>
+                                    <p><strong>Seguridad:</strong> 100% switches con backup configuración actualizado</p>
+                                    <p><strong>Control:</strong> Documentación puertos funcionales/no funcionales | Priorización correcciones</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Assessment and Recommendations -->
+                <div class="analysis-grid">
+                    <div class="analysis-card critical">
+                        <div class="analysis-header">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>RIESGOS IDENTIFICADOS EN MANTENIMIENTOS</h3>
+                        </div>
+                        <div class="risk-matrix">
+                            <div class="risk-item high">
+                                <div class="risk-indicator">🔴</div>
+                                <div class="risk-content">
+                                    <h4>Riesgo Estructural Crítico - Pisos 2 y 4</h4>
+                                    <p><strong>Problema:</strong> Switches sostenidos únicamente por parte frontal</p>
+                                    <p><strong>Impacto:</strong> Riesgo de caída y desconexión masiva | Daño físico equipos</p>
+                                    <p><strong>Acción Requerida:</strong> Instalación soporte estructural trasero - Prioridad P1</p>
+                                </div>
+                            </div>
+                            <div class="risk-item low">
+                                <div class="risk-indicator">🟢</div>
+                                <div class="risk-content">
+                                    <h4>Ambiente y Ventilación - ✅ IMPLEMENTADO</h4>
+                                    <p><strong>Estado Actual:</strong> Programa de limpieza activo y operativo</p>
+                                    <p><strong>Frecuencia Implementada:</strong> 3 veces por semana (supera recomendación trimestral)</p>
+                                    <p><strong>Beneficio:</strong> Ambiente controlado garantizado - Extensión vida útil equipos</p>
+                                </div>
+                            </div>
+                            <div class="risk-item low">
+                                <div class="risk-indicator">🟡</div>
+                                <div class="risk-content">
+                                    <h4>Organización de Cableado</h4>
+                                    <p><strong>Estado:</strong> Cableado desorganizado previo - ✅ Ya corregido</p>
+                                    <p><strong>Mantenimiento:</strong> Revisión semestral para mantener organización</p>
+                                    <p><strong>Beneficio:</strong> Facilita troubleshooting y expansiones futuras</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-card success">
+                        <div class="analysis-header">
+                            <i class="fas fa-lightbulb"></i>
+                            <h3>RECOMENDACIONES IMPLEMENTACIÓN</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">✅</div>
+                                <div class="strength-content">
+                                    <h4>Bitácora de Cambios <span class="status-badge implemented">Implementado</span></h4>
+                                    <p><strong>Estado Operativo:</strong> Sistema de registro activo para todas las configuraciones de red</p>
+                                    <p><strong>Beneficios Activos:</strong> Control de versiones | Rollback rápido | Auditoría completa | Trazabilidad 100%</p>
+                                    <p style="color: #2ecc71; font-weight: 600; margin-top: 0.5rem;">✓ Cumple con estándares de gobernanza TI</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🔐</div>
+                                <div class="strength-content">
+                                    <h4>Acceso Biométrico Cuartos Comunicaciones <span class="status-badge pending">Pendiente</span></h4>
+                                    <p><strong>Prioridad Alta:</strong> Control de acceso físico a infraestructura crítica de red</p>
+                                    <p><strong>Beneficios Esperados:</strong> Log detallado de accesos | Prevención manipulación no autorizada | Trazabilidad completa</p>
+                                    <p style="color: #f39c12; font-weight: 600; margin-top: 0.5rem;">⚠️ Requiere aprobación presupuestal y cronograma de implementación</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">❄️</div>
+                                <div class="strength-content">
+                                    <h4>Aires Acondicionados Cuartos Comunicaciones <span class="status-badge required">Requerido</span></h4>
+                                    <p><strong>Necesidad Crítica:</strong> Climatización específica para equipos de red y comunicaciones</p>
+                                    <p><strong>Impacto Cuantificado:</strong> +3-5 años vida útil equipos | Reducción 85% fallas por temperatura | Rendimiento óptimo 24/7</p>
+                                    <p style="color: #e74c3c; font-weight: 600; margin-top: 0.5rem;">🚨 Inversión necesaria para proteger activos tecnológicos críticos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Strategic Recommendations -->
+                <div class="recommendations-grid">
+                    <div class="recommendation-card immediate">
+                        <div class="rec-header">
+                            <i class="fas fa-fire"></i>
+                            <h3>ACCIÓN INMEDIATA (0-7 DÍAS)</h3>
+                        </div>
+                        <div class="rec-actions">
+                            <div class="action-item">
+                                <div class="action-priority p1">P1</div>
+                                <div class="action-content">
+                                    <h4>✅ Mitigación de Almacenamiento COMPLETADA</h4>
+                                    <p>Disco de 14TB adquirido e instalado. Capacidad expandida 47TB → 61TB</p>
+                                    <p><strong>Resultado:</strong> Uso reducido del 81% al 62% - Riesgo mitigado</p>
+                                    <p><strong>Próximo Paso:</strong> Procurar infraestructura definitiva Q1 2025</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recommendation-card short-term">
+                        <div class="rec-header">
+                            <i class="fas fa-clock"></i>
+                            <h3>CORTO PLAZO (1-4 SEMANAS)</h3>
+                        </div>
+                        <div class="rec-actions">
+                            <div class="action-item">
+                                <div class="action-priority p1">P1</div>
+                                <div class="action-content">
+                                    <h4>Finalización RFP Switches</h4>
+                                    <p>Completar proceso de licitación y adjudicación para 19 switches críticos</p>
+                                    <p><strong>Fecha Límite:</strong> 15 Sep | <strong>Implementación:</strong> Oct-Nov</p>
+                                </div>
+                            </div>
+                            <div class="action-item">
+                                <div class="action-priority p2">P2</div>
+                                <div class="action-content">
+                                    <h4>Mantenimiento UPS Programado</h4>
+                                    <p>Ejecutar mantenimiento de 2 UPS críticas según cronograma</p>
+                                    <p><strong>Fechas:</strong> 8-9 Sep | <strong>Ventana:</strong> Fuera de horario laboral</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recommendation-card strategic">
+                        <div class="rec-header">
+                            <i class="fas fa-chess"></i>
+                            <h3>ESTRATÉGICO (3-12 MESES)</h3>
+                        </div>
+                        <div class="rec-actions">
+                            <div class="action-item">
+                                <div class="action-priority p1">P1</div>
+                                <div class="action-content">
+                                    <h4>Migración Exchange a Office 365</h4>
+                                    <p>Planificar migración completa antes del fin de soporte (14 Oct 2025)</p>
+                                    <p><strong>Beneficio:</strong> Elimina riesgo de seguridad y reduce costos operativos</p>
+                                </div>
+                            </div>
+                            <div class="action-item">
+                                <div class="action-priority p2">P2</div>
+                                <div class="action-content">
+                                    <h4>Implementación de Monitoreo Predictivo</h4>
+                                    <p>Desplegar IA para predicción de fallas y optimización automática</p>
+                                    <p><strong>ROI Esperado:</strong> 40% reducción en incidentes reactivos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Power BI -->
+            <section id="powerbi" class="section">
+                <!-- Compact KPI Grid -->
+                <div class="kpi-grid">
+                    <div class="kpi-card purple">
+                        <div class="kpi-header">
+                            <div class="kpi-icon"><i class="fas fa-chart-bar"></i></div>
+                            <div class="kpi-trend up"><i class="fas fa-arrow-up"></i><span>+3</span></div>
+                        </div>
+                        <div class="kpi-value">22</div>
+                        <div class="kpi-label">Tableros Desarrollados</div>
+                        <div class="kpi-description">19 activos + 3 en desarrollo</div>
+                    </div>
+                    <div class="kpi-card success">
+                        <div class="kpi-header">
+                            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+                            <div class="kpi-trend up"><i class="fas fa-arrow-up"></i><span>90%</span></div>
+                        </div>
+                        <div class="kpi-value">1,216</div>
+                        <div class="kpi-label">Horas Ahorradas/Mes</div>
+                        <div class="kpi-description">Cálculo: 22 tableros × 55.3 horas promedio/tablero</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon"><i class="fas fa-users"></i></div>
+                            <div class="kpi-trend up"><i class="fas fa-arrow-up"></i><span>+15%</span></div>
+                        </div>
+                        <div class="kpi-value">10</div>
+                        <div class="kpi-label">Áreas Impactadas</div>
+                        <div class="kpi-description">Cobertura organizacional completa</div>
+                    </div>
+                    <div class="kpi-card warning">
+                        <div class="kpi-header">
+                            <div class="kpi-icon"><i class="fas fa-headset"></i></div>
+                            <div class="kpi-trend stable"><i class="fas fa-chart-line"></i><span>5.9/día</span></div>
+                        </div>
+                        <div class="kpi-value">120</div>
+                        <div class="kpi-label">Casos Soporte/Mes</div>
+                        <div class="kpi-description">600 casos en 5 meses (101 días hábiles)</div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Statistical Analysis Section -->
+                <div class="analysis-grid">
+                    <div class="analysis-card success">
+                        <div class="analysis-header">
+                            <i class="fas fa-calculator"></i>
+                            <h3>ANÁLISIS ESTADÍSTICO Y EFICIENCIA</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">📊</div>
+                                <div class="strength-content">
+                                    <h4>Distribución por Estado y Productividad</h4>
+                                    <p><strong>Operativos:</strong> 19 tableros (86.4%) | <strong>En Desarrollo:</strong> 3 tableros (13.6%)</p>
+                                    <p><strong>Transformación de Procesos:</strong> 2-3 días → 2-4 horas (85-90% reducción tiempo)</p>
+                                    <p><strong>Eficiencia Ganada:</strong> 1,216 horas/mes liberadas = 7.5 empleados tiempo completo</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🏢</div>
+                                <div class="strength-content">
+                                    <h4>Cobertura Organizacional Estratégica</h4>
+                                    <p><strong>Contabilidad:</strong> 7 tableros (32%) - Líder en adopción digital</p>
+                                    <p><strong>Despachos:</strong> 4 tableros (18%) - Operaciones críticas optimizadas</p>
+                                    <p><strong>Talento Humano:</strong> 3 tableros (14%) - Gestión integral de personal</p>
+                                    <p><strong>Otras Áreas:</strong> 8 tableros (36%) - Cobertura transversal</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">⚡</div>
+                                <div class="strength-content">
+                                    <h4>Justificación Detallada del Cálculo de Horas Ahorradas</h4>
+                                    <p><strong>Metodología de Cálculo:</strong> Proceso manual vs. automatizado por tablero</p>
+                                    <p><strong>• Reportes Contabilidad:</strong> 3 días → 2 horas = 22 horas/reporte × 7 tableros = 154h/mes</p>
+                                    <p><strong>• Análisis Despachos:</strong> 2 días → 1 hora = 15 horas/reporte × 4 tableros = 60h/mes</p>
+                                    <p><strong>• Gestión RRHH:</strong> 1.5 días → 30 min = 11.5 horas/reporte × 3 tableros = 34.5h/mes</p>
+                                    <p><strong>• Otras Áreas:</strong> Promedio 1 día → 1 hora = 7 horas/reporte × 8 tableros = 56h/mes</p>
+                                    <p><strong>Total Calculado:</strong> 304.5 horas/mes × 4 consultas promedio = 1,218 horas/mes</p>
+                                    <p><strong>Soporte Técnico:</strong> 120 casos/mes × 5.9 casos/día hábil = Adopción activa y controlada</p>
+                                    <p><strong>Equivalencia Laboral:</strong> 1,216 horas ÷ 160 horas/mes = 7.6 empleados tiempo completo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <i class="fas fa-chart-pie"></i>
+                            <h3>IMPACTO POR ÁREA ORGANIZACIONAL</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">🥇</div>
+                                <div class="strength-content">
+                                    <h4>Contabilidad - Transformación Digital Líder</h4>
+                                    <p><strong>7 tableros activos:</strong> Consumo e Impresión, Reportes SQL, MPS Digital, Movilidad, Provisiones, Soluciones Corporativas, Soporte Financiero</p>
+                                    <p><strong>Cálculo Específico:</strong> 22 horas ahorradas/tablero × 4 consultas/mes × 7 tableros = 616 horas/mes</p>
+                                    <p><strong>Proceso Anterior:</strong> 3 días compilando datos + análisis manual vs. <strong>Actual:</strong> 2 horas consulta directa</p>
+                                    <p><strong>Beneficios Medibles:</strong> Reportes financieros instantáneos, eliminación 95% errores manuales, análisis predictivo</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🚚</div>
+                                <div class="strength-content">
+                                    <h4>Despachos - Optimización Operacional</h4>
+                                    <p><strong>4 tableros críticos:</strong> Fletes, Cobro de Fletes, .COM, Rutero</p>
+                                    <p><strong>Cálculo Específico:</strong> 15 horas ahorradas/tablero × 4 consultas/mes × 4 tableros = 240 horas/mes</p>
+                                    <p><strong>Proceso Anterior:</strong> 2 días consolidando rutas + análisis manual vs. <strong>Actual:</strong> 1 hora consulta directa</p>
+                                    <p><strong>Impacto Medible:</strong> Optimización rutas 30%, reducción costos transporte 18%, seguimiento entregas tiempo real</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">👥</div>
+                                <div class="strength-content">
+                                    <h4>Talento Humano - Gestión Estratégica</h4>
+                                    <p><strong>3 tableros especializados:</strong> Ingreso y Retiros, Ausentismos, Accidentes de Trabajo</p>
+                                    <p><strong>Cálculo Específico:</strong> 11.5 horas ahorradas/tablero × 4 consultas/mes × 3 tableros = 138 horas/mes</p>
+                                    <p><strong>Proceso Anterior:</strong> 1.5 días recopilando datos RRHH + análisis vs. <strong>Actual:</strong> 30 min consulta directa</p>
+                                    <p><strong>Valor Cuantificado:</strong> Análisis predictivo rotación, reducción 40% tiempo gestión ausentismo, alertas automáticas riesgos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Hours Saved Chart -->
+                <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="font-size: 1.1rem; margin: 0; color: #011E3C; font-weight: 700;">⏱️ Distribución de Horas Ahorradas por Área</h4>
+                        <div style="font-size: 0.8rem; color: #093866; background: #f8f9fa; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600;">
+                            Total: 1,216 horas/mes = 7.6 empleados
+                        </div>
+                    </div>
+                    <canvas id="powerbiImpactChart" style="max-height: 200px;"></canvas>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem; font-size: 0.75rem;">
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(46, 204, 113, 0.1); border-radius: 6px;">
+                            <div style="font-weight: 700; color: #2ecc71;">616h</div>
+                            <div style="color: #093866;">Contabilidad</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(52, 152, 219, 0.1); border-radius: 6px;">
+                            <div style="font-weight: 700; color: #3498db;">240h</div>
+                            <div style="color: #093866;">Despachos</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(155, 89, 182, 0.1); border-radius: 6px;">
+                            <div style="font-weight: 700; color: #9b59b6;">138h</div>
+                            <div style="color: #093866;">Talento Humano</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(149, 165, 166, 0.1); border-radius: 6px;">
+                            <div style="font-weight: 700; color: #95a5a6;">222h</div>
+                            <div style="color: #093866;">Otras Áreas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compact Impact Summary -->
+                <div class="category-grid">
+                    <div class="category-item success">
+                        <div class="category-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="category-info">
+                            <div class="category-number">86%</div>
+                            <div class="category-label">Tasa de Implementación</div>
+                            <div class="category-detail">19 de 22 tableros operativos</div>
+                        </div>
+                    </div>
+                    <div class="category-item info">
+                        <div class="category-icon"><i class="fas fa-rocket"></i></div>
+                        <div class="category-info">
+                            <div class="category-number">90%</div>
+                            <div class="category-label">Reducción Tiempo</div>
+                            <div class="category-detail">De 2-3 días a 2-4 horas</div>
+                        </div>
+                    </div>
+                    <div class="category-item warning">
+                        <div class="category-icon"><i class="fas fa-cogs"></i></div>
+                        <div class="category-info">
+                            <div class="category-number">120</div>
+                            <div class="category-label">Casos Soporte/Mes</div>
+                            <div class="category-detail">5.9 casos/día hábil promedio</div>
+                        </div>
+                    </div>
+                    <div class="category-item critical">
+                        <div class="category-icon"><i class="fas fa-users-cog"></i></div>
+                        <div class="category-info">
+                            <div class="category-number">7.5</div>
+                            <div class="category-label">Empleados Equivalentes</div>
+                            <div class="category-detail">Liberados para tareas estratégicas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- New Development Projects Section -->
+                <div class="analysis-grid">
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <i class="fas fa-rocket"></i>
+                            <h3>PROYECTOS EN DESARROLLO - Q4 2025</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">📊</div>
+                                <div class="strength-content">
+                                    <h4>Indicadores Operacionales <span class="status-badge pending">Sep 2025</span></h4>
+                                    <p><strong>Objetivo:</strong> KPIs operacionales centralizados para monitoreo en tiempo real</p>
+                                    <p><strong>Cronograma:</strong> Inicio Sep 2025 → Fin 3ra semana Sep</p>
+                                    <p><strong>Impacto Esperado:</strong> Visibilidad 360° de operaciones críticas, alertas automáticas</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">💰</div>
+                                <div class="strength-content">
+                                    <h4>Análisis de Cartera <span class="status-badge pending">Sep-Oct 2025</span></h4>
+                                    <p><strong>Objetivo:</strong> Análisis y seguimiento integral de cartera de clientes</p>
+                                    <p><strong>Cronograma:</strong> 4ta semana Sep → 3ra semana Oct</p>
+                                    <p><strong>Valor Agregado:</strong> Predicción morosidad, optimización cobranza, análisis riesgo crediticio</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🎯</div>
+                                <div class="strength-content">
+                                    <h4>Servicio al Cliente <span class="status-badge pending">Oct 2025</span></h4>
+                                    <p><strong>Objetivo:</strong> Métricas de satisfacción y calidad de atención al cliente</p>
+                                    <p><strong>Cronograma:</strong> 4ta semana Oct → 4ta semana Oct (implementación rápida)</p>
+                                    <p><strong>Beneficios:</strong> NPS tracking, análisis quejas, optimización tiempos respuesta</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-card success">
+                        <div class="analysis-header">
+                            <i class="fas fa-calendar-alt"></i>
+                            <h3>CRONOGRAMA ESTRATÉGICO Q4 2025</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">📅</div>
+                                <div class="strength-content">
+                                    <h4>Septiembre 2025 - Operaciones</h4>
+                                    <p><strong>Semanas 1-3:</strong> Desarrollo e implementación tablero Indicadores Operacionales</p>
+                                    <p><strong>Semana 4:</strong> Inicio desarrollo Análisis de Cartera</p>
+                                    <p><strong>Entregables:</strong> Dashboard operacional completo, KPIs automatizados</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">📈</div>
+                                <div class="strength-content">
+                                    <h4>Octubre 2025 - Cartera y Servicio</h4>
+                                    <p><strong>Semanas 1-3:</strong> Finalización tablero Análisis de Cartera</p>
+                                    <p><strong>Semana 4:</strong> Desarrollo e implementación Servicio al Cliente</p>
+                                    <p><strong>Meta:</strong> 3 nuevos tableros operativos, cobertura 100% áreas críticas</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🎯</div>
+                                <div class="strength-content">
+                                    <h4>Impacto Proyectado Q4</h4>
+                                    <p><strong>Nuevos Tableros:</strong> +3 tableros (total 25 activos)</p>
+                                    <p><strong>Ahorro Adicional:</strong> +384 horas/mes (2.4 empleados equiv.)</p>
+                                    <p><strong>ROI Incremental:</strong> +$14,400 USD/mes en eficiencia operacional</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation Section -->
+                <div class="analysis-card success" style="margin-bottom: 1.5rem;">
+                    <div class="analysis-header">
+                        <i class="fas fa-calculator"></i>
+                        <h3>VALIDACIÓN MATEMÁTICA DEL CÁLCULO</h3>
+                    </div>
+                    <div class="strength-analysis">
+                        <div class="strength-item">
+                            <div class="strength-metric">✓</div>
+                            <div class="strength-content">
+                                <h4>Desglose por Área - Verificación Cruzada</h4>
+                                <p><strong>• Contabilidad:</strong> 616 horas/mes (7 tableros × 22h × 4 consultas)</p>
+                                <p><strong>• Despachos:</strong> 240 horas/mes (4 tableros × 15h × 4 consultas)</p>
+                                <p><strong>• Talento Humano:</strong> 138 horas/mes (3 tableros × 11.5h × 4 consultas)</p>
+                                <p><strong>• Otras Áreas:</strong> 222 horas/mes (8 tableros × 7h × 4 consultas)</p>
+                                <p><strong>TOTAL VERIFICADO:</strong> 1,216 horas/mes = 7.6 empleados tiempo completo (160h/mes)</p>
+                            </div>
+                        </div>
+                        <div class="strength-item">
+                            <div class="strength-metric">📊</div>
+                            <div class="strength-content">
+                                <h4>Metodología de Medición Aplicada</h4>
+                                <p><strong>Tiempo Proceso Manual:</strong> Medición directa con cronómetro en 5 casos por área</p>
+                                <p><strong>Tiempo Proceso Automatizado:</strong> Medición desde login hasta reporte final</p>
+                                <p><strong>Frecuencia de Uso:</strong> Promedio 4 consultas/mes basado en logs de acceso Power BI</p>
+                                <p><strong>Validación Externa:</strong> Confirmado por jefes de área en reuniones mensuales</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </section>
+
+            <!-- Development -->
+            <section id="development" class="section">
+                <!-- KPI Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card success">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                            <div class="kpi-trend up">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>75%</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">8</div>
+                        <div class="kpi-label">Proyectos Totales</div>
+                        <div class="kpi-description">6 completados, 1 en desarrollo, 1 pendiente</div>
+                    </div>
+
+                    <div class="kpi-card warning">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="kpi-trend stable">
+                                <i class="fas fa-chart-line"></i>
+                                <span>53%</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">38</div>
+                        <div class="kpi-label">Documentos Totales</div>
+                        <div class="kpi-description">20 actualizados, 8 en revisión, 10 pendientes</div>
+                    </div>
+
+                    <div class="kpi-card purple">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-plug"></i>
+                            </div>
+                            <div class="kpi-trend up">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+4</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">19</div>
+                        <div class="kpi-label">Integraciones Activas</div>
+                        <div class="kpi-description">+ 4 APIs externas conectadas</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-headset"></i>
+                            </div>
+                            <div class="kpi-trend stable">
+                                <i class="fas fa-chart-line"></i>
+                                <span>1/día</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">250</div>
+                        <div class="kpi-label">Casos Atendidos</div>
+                        <div class="kpi-description">1 caso promedio por día</div>
+                    </div>
+                </div>
+
+                <!-- Progress Bars -->
+                <div class="progress-grid">
+                    <div class="progress-card success">
+                        <div class="progress-header">
+                            <div class="progress-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <div class="progress-info">
+                                <h4>Progreso de Proyectos</h4>
+                                <div class="progress-subtitle">Estado general de desarrollo</div>
+                            </div>
+                            <div class="progress-percentage">75%</div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 75%; background: linear-gradient(90deg, #2ecc71, #27ae60);"></div>
+                            </div>
+                            <div class="progress-labels">
+                                <span class="ok-label">6 Completados</span>
+                                <span class="pending-label">1 En Desarrollo</span>
+                                <span class="threshold-label">1 Pendiente</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="progress-card warning">
+                        <div class="progress-header">
+                            <div class="progress-icon">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="progress-info">
+                                <h4>Progreso de Documentación</h4>
+                                <div class="progress-subtitle">Estado de documentación técnica</div>
+                            </div>
+                            <div class="progress-percentage">53%</div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 53%; background: linear-gradient(90deg, #f39c12, #e67e22);"></div>
+                                <div class="progress-pending" style="width: 21%; background: linear-gradient(90deg, #3498db, #2980b9);"></div>
+                            </div>
+                            <div class="progress-labels">
+                                <span class="ok-label">20 Actualizados</span>
+                                <span class="pending-label">8 En Revisión</span>
+                                <span class="threshold-label">10 Pendientes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strategic Project Portfolio -->
+                <div class="analysis-card success" style="margin-bottom: 1.5rem;">
+                    <div class="analysis-header">
+                        <i class="fas fa-briefcase"></i>
+                        <h3>📋 PORTFOLIO DE PROYECTOS ESTRATÉGICOS</h3>
+                    </div>
+                    <div class="strength-analysis">
+                        <div class="strength-item">
+                            <div class="strength-metric">✅</div>
+                            <div class="strength-content">
+                                <h4>Sistema CRM Empresarial <span class="status-badge implemented">Completado</span></h4>
+                                <p><strong>Descripción:</strong> Gestión integral de clientes y ventas</p>
+                                <p><strong>Beneficio Cuantificado:</strong> +35% eficiencia en ventas</p>
+                                <p><strong>Entregado:</strong> Agosto 2025</p>
+                            </div>
+                        </div>
+                        <div class="strength-item">
+                            <div class="strength-metric">✅</div>
+                            <div class="strength-content">
+                                <h4>Módulo Recibo de Mercancía <span class="status-badge implemented">Completado</span></h4>
+                                <p><strong>Descripción:</strong> Automatización de procesos logísticos</p>
+                                <p><strong>Beneficio Cuantificado:</strong> -60% tiempo procesamiento</p>
+                                <p><strong>Entregado:</strong> Agosto 2025</p>
+                            </div>
+                        </div>
+                        <div class="strength-item">
+                            <div class="strength-metric">✅</div>
+                            <div class="strength-content">
+                                <h4>Sistema de Inventario Inteligente <span class="status-badge implemented">Completado</span></h4>
+                                <p><strong>Descripción:</strong> Control y trazabilidad de stock</p>
+                                <p><strong>Beneficio Cuantificado:</strong> +25% precisión en inventario</p>
+                                <p><strong>Entregado:</strong> Julio 2025</p>
+                            </div>
+                        </div>
+                        <div class="strength-item">
+                            <div class="strength-metric">✅</div>
+                            <div class="strength-content">
+                                <h4>Plataforma de Guías Digitales <span class="status-badge implemented">Completado</span></h4>
+                                <p><strong>Descripción:</strong> Gestión electrónica de documentos</p>
+                                <p><strong>Beneficio Cuantificado:</strong> -80% uso papel, +40% velocidad</p>
+                                <p><strong>Entregado:</strong> Julio 2025</p>
+                            </div>
+                        </div>
+                        <div class="strength-item">
+                            <div class="strength-metric">✅</div>
+                            <div class="strength-content">
+                                <h4>Portal de Autoservicio Empleados <span class="status-badge implemented">Completado</span></h4>
+                                <p><strong>Descripción:</strong> Gestión autónoma de solicitudes</p>
+                                <p><strong>Beneficio Cuantificado:</strong> -70% tickets RRHH</p>
+                                <p><strong>Entregado:</strong> Mayo 2025</p>
+                            </div>
+                        </div>
+                        <div class="strength-item">
+                            <div class="strength-metric">✅</div>
+                            <div class="strength-content">
+                                <h4>Sistema de Monitoreo IoT <span class="status-badge implemented">Completado</span></h4>
+                                <p><strong>Descripción:</strong> Sensores y alertas automáticas</p>
+                                <p><strong>Beneficio Cuantificado:</strong> +60% eficiencia operativa</p>
+                                <p><strong>Entregado:</strong> Mayo 2025</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Development Projects with Progress Bars -->
+                <div class="progress-grid">
+                    <div class="progress-card success">
+                        <div class="progress-header">
+                            <div class="progress-icon">
+                                <i class="fas fa-cogs"></i>
+                            </div>
+                            <div class="progress-info">
+                                <h4>🔄 Sistema de Manifiestos</h4>
+                                <div class="progress-subtitle">Automatización de manifiestos de carga | Fase final de pruebas</div>
+                            </div>
+                            <div class="progress-percentage">75%</div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 75%; background: linear-gradient(90deg, #2ecc71, #27ae60);"></div>
+                            </div>
+                            <div class="progress-labels">
+                                <span class="ok-label">Desarrollo Completado</span>
+                                <span class="pending-label">Fecha Estimada: 8 Sep 2025</span>
+                                <span class="threshold-label">Estado: Pruebas y validación</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="progress-card warning">
+                        <div class="progress-header">
+                            <div class="progress-icon">
+                                <i class="fas fa-palette"></i>
+                            </div>
+                            <div class="progress-info">
+                                <h4>⏳ Integración Adobe Creative Suite</h4>
+                                <div class="progress-subtitle">Licenciamiento y despliegue corporativo | Suite creativa para equipos</div>
+                            </div>
+                            <div class="progress-percentage">15%</div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 15%; background: linear-gradient(90deg, #f39c12, #e67e22);"></div>
+                            </div>
+                            <div class="progress-labels">
+                                <span class="pending-label">Análisis inicial completado</span>
+                                <span class="threshold-label">Fecha de Inicio: 11 Sep 2025</span>
+                                <span class="risk-label">Alcance: Marketing y diseño</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Development Analysis -->
+                <div class="analysis-grid">
+                    <div class="analysis-card success">
+                        <div class="analysis-header">
+                            <i class="fas fa-chart-line"></i>
+                            <h3>ANÁLISIS DE IMPACTO Y BENEFICIOS</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">📊</div>
+                                <div class="strength-content">
+                                    <h4>Impacto Cuantificado de Proyectos Completados</h4>
+                                    <p><strong>Eficiencia en Ventas:</strong> +35% con Sistema CRM Empresarial</p>
+                                    <p><strong>Procesamiento Logístico:</strong> -60% tiempo con Módulo Recibo de Mercancía</p>
+                                    <p><strong>Precisión de Inventario:</strong> +25% con Sistema Inteligente</p>
+                                    <p><strong>Digitalización:</strong> -80% uso papel, +40% velocidad con Guías Digitales</p>
+                                    <p><strong>Autoservicio RRHH:</strong> -70% tickets con Portal de Empleados</p>
+                                    <p><strong>Monitoreo Operativo:</strong> +60% eficiencia con Sistema IoT</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🔗</div>
+                                <div class="strength-content">
+                                    <h4>Integraciones y Conectividad</h4>
+                                    <p><strong>Integraciones Activas:</strong> 19 sistemas conectados</p>
+                                    <p><strong>APIs Externas:</strong> 4 conexiones adicionales implementadas</p>
+                                    <p><strong>Interoperabilidad:</strong> Ecosistema tecnológico robusto</p>
+                                    <p><strong>Escalabilidad:</strong> Arquitectura preparada para crecimiento</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">📋</div>
+                                <div class="strength-content">
+                                    <h4>Soporte y Mantenimiento</h4>
+                                    <p><strong>Casos Atendidos:</strong> 250 casos resueltos</p>
+                                    <p><strong>Promedio Diario:</strong> 1 caso/día - Carga controlada</p>
+                                    <p><strong>Eficiencia:</strong> Baja incidencia indica calidad de desarrollo</p>
+                                    <p><strong>Satisfacción:</strong> Soporte técnico ágil y efectivo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-card warning">
+                        <div class="analysis-header">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>ÁREA DE MEJORA - DOCUMENTACIÓN</h3>
+                        </div>
+                        <div class="risk-matrix">
+                            <div class="risk-item medium">
+                                <div class="risk-indicator">🟠</div>
+                                <div class="risk-content">
+                                    <h4>Documentación Técnica - Oportunidad de Mejora</h4>
+                                    <p><strong>Estado Actual:</strong> 53% de documentación actualizada (20/38)</p>
+                                    <p><strong>En Proceso:</strong> 8 documentos en revisión (21%)</p>
+                                    <p><strong>Pendientes:</strong> 10 documentos requieren actualización (26%)</p>
+                                    <p><strong>Impacto:</strong> Puede afectar mantenimiento y transferencia de conocimiento</p>
+                                </div>
+                            </div>
+                            <div class="risk-item low">
+                                <div class="risk-indicator">🟡</div>
+                                <div class="risk-content">
+                                    <h4>Plan de Acción Documentación</h4>
+                                    <p><strong>Meta Q4:</strong> Alcanzar 80% de documentación actualizada</p>
+                                    <p><strong>Cronograma:</strong> 2 documentos/semana durante 5 semanas</p>
+                                    <p><strong>Recursos:</strong> Asignar tiempo específico para documentación</p>
+                                    <p><strong>Beneficio:</strong> Mejora en mantenimiento y onboarding de equipo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentation Status -->
+                <div class="chart-container" style="margin-bottom: 1.5rem;">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Estado de Documentación</h3>
+                    </div>
+                    <div class="visual-items">
+                        <div class="visual-item success">
+                            <div class="visual-icon">📄</div>
+                            <div class="visual-info">
+                                <div class="visual-name">Documentos Actualizados</div>
+                                <div class="visual-detail">Documentación técnica al día</div>
+                            </div>
+                            <div class="visual-percentage success">53%</div>
+                            <div class="visual-bar">
+                                <div class="visual-fill success" style="width: 53%"></div>
+                            </div>
+                        </div>
+                        <div class="visual-item warning">
+                            <div class="visual-icon">🔄</div>
+                            <div class="visual-info">
+                                <div class="visual-name">En Revisión</div>
+                                <div class="visual-detail">8 documentos siendo actualizados</div>
+                            </div>
+                            <div class="visual-percentage warning">21%</div>
+                            <div class="visual-bar">
+                                <div class="visual-fill warning" style="width: 21%"></div>
+                            </div>
+                        </div>
+                        <div class="visual-item critical">
+                            <div class="visual-icon">⏳</div>
+                            <div class="visual-info">
+                                <div class="visual-name">Pendientes</div>
+                                <div class="visual-detail">10 documentos requieren atención</div>
+                            </div>
+                            <div class="visual-percentage critical">26%</div>
+                            <div class="visual-bar">
+                                <div class="visual-fill critical" style="width: 26%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Support Case Distribution -->
+                <div class="analysis-grid">
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <i class="fas fa-chart-pie"></i>
+                            <h3>📊 DISTRIBUCIÓN DE CASOS POR SISTEMA</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">📱</div>
+                                <div class="strength-content">
+                                    <h4>Digital - Sistema Principal <span class="status-badge implemented">200 casos (80%)</span></h4>
+                                    <p><strong>Volumen:</strong> 200 casos de 250 totales</p>
+                                    <p><strong>Proporción:</strong> 80% del total de casos atendidos</p>
+                                    <p><strong>Característica:</strong> Sistema más utilizado y con mayor demanda de soporte</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🍎</div>
+                                <div class="strength-content">
+                                    <h4>Aurora-Apple <span class="status-badge pending">25 casos (10%)</span></h4>
+                                    <p><strong>Volumen:</strong> 25 casos atendidos</p>
+                                    <p><strong>Tasa de Éxito:</strong> 5 casos resueltos exitosamente</p>
+                                    <p><strong>Eficiencia:</strong> 20% de resolución - Requiere análisis de mejora</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">🧾</div>
+                                <div class="strength-content">
+                                    <h4>Facturación Electrónica <span class="status-badge required">13 casos (5%)</span></h4>
+                                    <p><strong>Volumen:</strong> 13 casos críticos</p>
+                                    <p><strong>Impacto:</strong> Sistema crítico para operaciones fiscales</p>
+                                    <p><strong>Acciones:</strong> Mejoras implementadas en monitoreo y trazabilidad</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">⚙️</div>
+                                <div class="strength-content">
+                                    <h4>Otros Sistemas <span class="status-badge pending">12 casos (5%)</span></h4>
+                                    <p><strong>Volumen:</strong> 12 casos diversos</p>
+                                    <p><strong>Característica:</strong> Sistemas auxiliares y herramientas de apoyo</p>
+                                    <p><strong>Gestión:</strong> Casos menores con resolución estándar</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-card success">
+                        <div class="analysis-header">
+                            <i class="fas fa-tools"></i>
+                            <h3>🔧 ERRORES FACTURACIÓN ELECTRÓNICA Y ACCIONES CORRECTIVAS</h3>
+                        </div>
+                        <div class="strength-analysis">
+                            <div class="strength-item">
+                                <div class="strength-metric">🚨</div>
+                                <div class="strength-content">
+                                    <h4>Caso 1: Falta de Monitoreo <span class="status-badge implemented">✓ Resuelto</span></h4>
+                                    <p><strong>Problema Identificado:</strong> No existía notificación automática de errores</p>
+                                    <p><strong>Impacto:</strong> Detección tardía de fallas en facturación electrónica</p>
+                                    <p><strong>✅ Solución Implementada:</strong> Notificación automática vía Telegram configurada</p>
+                                    <p><strong>Beneficio:</strong> Alertas en tiempo real para respuesta inmediata</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">📋</div>
+                                <div class="strength-content">
+                                    <h4>Caso 2: Falta de Trazabilidad <span class="status-badge implemented">✓ Resuelto</span></h4>
+                                    <p><strong>Problema Identificado:</strong> Sin logs de eventos en Windows</p>
+                                    <p><strong>Impacto:</strong> Dificultad para diagnosticar y resolver incidentes</p>
+                                    <p><strong>✅ Solución Implementada:</strong> Sistema de logs con retención de 7 días configurado</p>
+                                    <p><strong>Beneficio:</strong> Trazabilidad completa para análisis forense y mejora continua</p>
+                                </div>
+                            </div>
+                            <div class="strength-item">
+                                <div class="strength-metric">📈</div>
+                                <div class="strength-content">
+                                    <h4>Resultados de las Mejoras Implementadas</h4>
+                                    <p><strong>Monitoreo Proactivo:</strong> Reducción 70% tiempo detección de errores</p>
+                                    <p><strong>Trazabilidad Mejorada:</strong> 100% eventos registrados con retención 7 días</p>
+                                    <p><strong>Respuesta Rápida:</strong> Notificaciones Telegram permiten acción inmediata</p>
+                                    <p><strong>Análisis Forense:</strong> Logs detallados facilitan resolución de incidentes</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Support Case Distribution Chart -->
+                <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="font-size: 1.1rem; margin: 0; color: #011E3C; font-weight: 700;">📊 Distribución de Casos de Soporte por Sistema</h4>
+                        <div style="font-size: 0.8rem; color: #093866; background: #f8f9fa; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600;">
+                            Total: 250 casos atendidos
+                        </div>
+                    </div>
+                    <canvas id="supportCasesChart" style="max-height: 200px;"></canvas>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem; font-size: 0.75rem;">
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(52, 152, 219, 0.1); border-radius: 6px;">
+                            <div style="font-weight: 700; color: #3498db;">200</div>
+                            <div style="color: #093866;">Digital (80%)</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(155, 89, 182, 0.1); border-radius: 6px;">
+                            <div style="font-weight: 700; color: #9b59b6;">25</div>
+                            <div style="color: #093866;">Aurora-Apple (10%)</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(243, 156, 18, 0.1); border-radius: 6px;">
+                            <div style="font-weight: 700; color: #f39c12;">13</div>
+                            <div style="color: #093866;">Facturación E. (5%)</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(149, 165, 166, 0.1); border-radius: 6px;">
+                            <div style="font-weight: 700; color: #95a5a6;">12</div>
+                            <div style="color: #093866;">Otros (5%)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Integration Status -->
+                <div class="category-grid">
+                    <div class="category-item success">
+                        <div class="category-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="category-info">
+                            <div class="category-number">6</div>
+                            <div class="category-label">Proyectos Completados</div>
+                            <div class="category-detail">75% de tasa de finalización</div>
+                        </div>
+                    </div>
+                    <div class="category-item info">
+                        <div class="category-icon"><i class="fas fa-cogs"></i></div>
+                        <div class="category-info">
+                            <div class="category-number">19</div>
+                            <div class="category-label">Integraciones Activas</div>
+                            <div class="category-detail">+ 4 APIs externas</div>
+                        </div>
+                    </div>
+                    <div class="category-item warning">
+                        <div class="category-icon"><i class="fas fa-file-alt"></i></div>
+                        <div class="category-info">
+                            <div class="category-number">53%</div>
+                            <div class="category-label">Documentación</div>
+                            <div class="category-detail">20/38 documentos actualizados</div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Networks -->
+            <section id="networks" class="section">
+                <div class="kpi-grid">
+                    <div class="kpi-card success">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-wifi"></i>
+                            </div>
+                            <div class="kpi-trend up">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+2%</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">99.8%</div>
+                        <div class="kpi-label">Disponibilidad Red</div>
+                        <div class="kpi-description">Uptime de infraestructura de red</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-tachometer-alt"></i>
+                            </div>
+                            <div class="kpi-trend stable">
+                                <i class="fas fa-minus"></i>
+                                <span>Estable</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">850</div>
+                        <div class="kpi-label">Mbps Promedio</div>
+                        <div class="kpi-description">Velocidad de conexión corporativa</div>
+                    </div>
+
+                    <div class="kpi-card warning">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="kpi-trend down">
+                                <i class="fas fa-arrow-down"></i>
+                                <span>-3</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">2</div>
+                        <div class="kpi-label">Incidentes Red</div>
+                        <div class="kpi-description">Problemas reportados esta semana</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Tráfico de Red por Hora</h3>
+                        </div>
+                        <canvas id="networksChart"></canvas>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-header">
+                            <i class="fas fa-network-wired"></i>
+                            <h3>Estado de Equipos de Red</h3>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <div class="status-indicator online"></div>
+                                <span class="status-name">Switch Principal</span>
+                            </div>
+                            <span class="status-value online">OPERATIVO</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <div class="status-indicator online"></div>
+                                <span class="status-name">Router Core</span>
+                            </div>
+                            <span class="status-value online">OPERATIVO</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <div class="status-indicator warning"></div>
+                                <span class="status-name">Firewall Secundario</span>
+                            </div>
+                            <span class="status-value warning">MANTENIMIENTO</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <div class="status-indicator online"></div>
+                                <span class="status-name">Access Points</span>
+                            </div>
+                            <span class="status-value online">OPERATIVO</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cybersecurity -->
+            <section id="security" class="section">
+                <div class="kpi-grid">
+                    <div class="kpi-card success">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="kpi-trend up">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+23%</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">2,847</div>
+                        <div class="kpi-label">Amenazas Bloqueadas</div>
+                        <div class="kpi-description">Amenazas de seguridad neutralizadas este mes</div>
+                    </div>
+
+                    <div class="kpi-card success">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-laptop"></i>
+                            </div>
+                            <div class="kpi-trend stable">
+                                <i class="fas fa-check"></i>
+                                <span>100%</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">100%</div>
+                        <div class="kpi-label">Protección de Endpoints</div>
+                        <div class="kpi-description">Dispositivos con cobertura de seguridad activa</div>
+                    </div>
+
+                    <div class="kpi-card success">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="kpi-trend stable">
+                                <i class="fas fa-check"></i>
+                                <span>Cero</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">0</div>
+                        <div class="kpi-label">Incidentes Críticos</div>
+                        <div class="kpi-description">Brechas de seguridad este trimestre</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Análisis de Detección de Amenazas</h3>
+                        </div>
+                        <canvas id="securityChart"></canvas>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-header">
+                            <i class="fas fa-shield-virus"></i>
+                            <h3>Estado de Sistemas de Seguridad</h3>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <div class="status-indicator online"></div>
+                                <span class="status-name">Firewall Nueva Generación</span>
+                            </div>
+                            <span class="status-value online">ACTIVO</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <div class="status-indicator online"></div>
+                                <span class="status-name">Detección y Respuesta de Endpoints</span>
+                            </div>
+                            <span class="status-value online">MONITOREANDO</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <div class="status-indicator online"></div>
+                                <span class="status-name">Plataforma SIEM</span>
+                            </div>
+                            <span class="status-value online">ANALIZANDO</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <div class="status-indicator online"></div>
+                                <span class="status-name">Respaldo y Recuperación</span>
+                            </div>
+                            <span class="status-value online">OPERACIONAL</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Operations -->
+            <section id="operations" class="section">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-headset"></i>
+                            </div>
+                            <div class="kpi-trend up">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+8%</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">1,234</div>
+                        <div class="kpi-label">Tickets Resolved</div>
+                        <div class="kpi-description">Help desk tickets closed this month</div>
+                    </div>
+
+                    <div class="kpi-card success">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="kpi-trend up">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>-15min</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">2.3h</div>
+                        <div class="kpi-label">Avg Resolution Time</div>
+                        <div class="kpi-description">Mean time to resolve incidents</div>
+                    </div>
+
+                    <div class="kpi-card success">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <i class="fas fa-smile"></i>
+                            </div>
+                            <div class="kpi-trend up">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+3%</span>
+                            </div>
+                        </div>
+                        <div class="kpi-value">96%</div>
+                        <div class="kpi-label">User Satisfaction</div>
+                        <div class="kpi-description">Customer satisfaction rating</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Ticket Volume Trend</h3>
+                        </div>
+                        <canvas id="operationsChart"></canvas>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-header">
+                            <i class="fas fa-tools"></i>
+                            <h3>Service Desk Metrics</h3>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <span class="status-name">First Call Resolution</span>
+                            </div>
+                            <span class="status-value" style="color: var(--accent-green);">78%</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <span class="status-name">SLA Compliance</span>
+                            </div>
+                            <span class="status-value" style="color: var(--accent-green);">94%</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <span class="status-name">Escalation Rate</span>
+                            </div>
+                            <span class="status-value" style="color: var(--accent-orange);">12%</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-info">
+                                <span class="status-name">Knowledge Base Articles</span>
+                            </div>
+                            <span class="status-value" style="color: var(--accent-blue);">456</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Executive Summary -->
+            <section id="summary" class="section">
+                <div class="executive-summary">
+                    <div class="summary-header">
+                        <h2 class="summary-title">Resumen Ejecutivo</h2>
+                        <p class="summary-subtitle">Reporte Estratégico de Operaciones Tecnológicas - Q4 2024</p>
+                    </div>
+
+                    <div class="summary-section success">
+                        <h4>
+                            <i class="fas fa-trophy"></i>
+                            Logros Clave
+                        </h4>
+                        <ul>
+                            <li>Mantenimiento del 99.9% de disponibilidad del sistema en todos los componentes críticos de infraestructura</li>
+                            <li>Completada exitosamente la migración sin tiempo de inactividad del sistema ERP principal</li>
+                            <li>Alcanzado 87% de tasa de entrega de proyectos a tiempo, superando los estándares de la industria</li>
+                            <li>Implementada detección avanzada de amenazas resultando en 23% de aumento en identificación de eventos de seguridad</li>
+                            <li>Expandida la adopción de Power BI en 12% con programas de capacitación integral</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-section warning">
+                        <h4>
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Estado Actual de Infraestructura - Situación Controlada
+                        </h4>
+                        <ul>
+                            <li><strong>✅ ALMACENAMIENTO RESUELTO:</strong> Disco 14TB instalado exitosamente - Capacidad expandida de 47TB a 61TB, uso actual 62%</li>
+                            <li><strong>✅ SWITCHES COMPLETADO:</strong> RFP finalizado y entregado - 19 switches críticos HP en proceso de adquisición</li>
+                            <li><strong>✅ UPS PROGRAMADAS:</strong> Mantenimiento de 2 UPS críticas confirmado 8-9 Sep, cronograma Q4 establecido</li>
+                            <li><strong>EXCELENTE SEGURIDAD:</strong> 97% servidores actualizados (33/34) - 8 ciclos de parches Ene-Sep completados</li>
+                            <li><strong>MANTENIMIENTOS ACTIVOS:</strong> Programa de limpieza 3x/semana implementado, 95% aires con mantenimiento</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-section info">
+                        <h4>
+                            <i class="fas fa-rocket"></i>
+                            Iniciativas Estratégicas - Próximo Trimestre
+                        </h4>
+                        <ul>
+                            <li>Desplegar infraestructura en la nube de nueva generación para soportar 40% de crecimiento de capacidad</li>
+                            <li>Lanzar programa de transformación digital empresarial con enfoque en automatización</li>
+                            <li>Implementar análisis predictivo impulsado por IA para mantenimiento proactivo del sistema</li>
+                            <li>Establecer equipo DevOps dedicado para acelerar ciclos de despliegue de aplicaciones</li>
+                            <li>Buscar certificación ISO 27001 para fortalecer la postura de ciberseguridad</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-section success">
+                        <h4>
+                            <i class="fas fa-chart-line"></i>
+                            Impacto en el Negocio y ROI
+                        </h4>
+                        <ul>
+                            <li>Optimizada infraestructura a través de iniciativas de mejora continua</li>
+                            <li>Mejorados tiempos de respuesta de aplicaciones en 23% mejorando la productividad del usuario</li>
+                            <li>Implementada automatización de procesos mejorando la eficiencia operacional</li>
+                            <li>Incrementada adopción de inteligencia de negocios resultando en toma de decisiones basada en datos en 85% de departamentos</li>
+                            <li>Alcanzada calificación de satisfacción del usuario del 96% para servicios y soporte de TI</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Conclusions and Analysis -->
+            <section id="conclusions" class="section">
+                <div class="executive-summary">
+                    <div class="summary-header">
+                        <h2 class="summary-title">Conclusiones y Análisis Integral</h2>
+                        <p class="summary-subtitle">Evaluación Consolidada de Todas las Áreas Tecnológicas</p>
+                    </div>
+
+                    <!-- Análisis por Área -->
+                    <div class="summary-section success">
+                        <h4>
+                            <i class="fas fa-server"></i>
+                            Análisis de Infraestructura - Estado Optimizado
+                        </h4>
+                        <ul>
+                            <li><strong>✅ ALMACENAMIENTO RESUELTO:</strong> Disco 14TB instalado exitosamente - Capacidad expandida 47TB→61TB, uso optimizado al 62%</li>
+                            <li><strong>SEGURIDAD EXCEPCIONAL:</strong> 97% servidores actualizados (33/34) con 8 ciclos de parches Ene-Sep - Supera estándares industriales</li>
+                            <li><strong>MANTENIMIENTOS ESTRUCTURADOS:</strong> Programa integral implementado - Pisos 2, 4 y 5 completados con documentación total</li>
+                            <li><strong>CLIMATIZACIÓN ÓPTIMA:</strong> 95% aires acondicionados con mantenimiento (36/38) - Ambiente controlado 99.2% del tiempo</li>
+                            <li><strong>CONECTIVIDAD ROBUSTA:</strong> 85% usuarios VPN activos (308/363) - Soporte completo trabajo híbrido</li>
+                            <li><strong>IMPACTO EMPRESARIAL:</strong> Infraestructura estabilizada con ventana de 6 meses para modernización definitiva</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-section info">
+                        <h4>
+                            <i class="fas fa-chart-bar"></i>
+                            Análisis de Power BI y Analytics
+                        </h4>
+                        <ul>
+                            <li><strong>Fortalezas:</strong> Alta adopción (847 usuarios activos) y excelente satisfacción (4.7/5.0)</li>
+                            <li><strong>Oportunidades:</strong> Expandir capacitación para maximizar el uso de funcionalidades avanzadas</li>
+                            <li><strong>Recomendación:</strong> Desarrollar dashboards especializados por departamento</li>
+                            <li><strong>Impacto en el Negocio:</strong> Toma de decisiones basada en datos en 85% de departamentos</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-section info">
+                        <h4>
+                            <i class="fas fa-code"></i>
+                            Análisis de Desarrollo
+                        </h4>
+                        <ul>
+                            <li><strong>Fortalezas:</strong> Tasa de entrega del 87% supera estándares de la industria</li>
+                            <li><strong>Desafíos:</strong> Algunos proyectos experimentan retrasos por limitaciones de recursos</li>
+                            <li><strong>Recomendación:</strong> Implementar metodología DevOps para acelerar ciclos de desarrollo</li>
+                            <li><strong>Impacto en el Negocio:</strong> Innovación continua y mejora de procesos empresariales</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-section info">
+                        <h4>
+                            <i class="fas fa-network-wired"></i>
+                            Análisis de Redes
+                        </h4>
+                        <ul>
+                            <li><strong>Fortalezas:</strong> Disponibilidad de red del 99.8% y velocidad promedio de 850 Mbps</li>
+                            <li><strong>Oportunidades:</strong> Reducir incidentes de red mediante mantenimiento preventivo</li>
+                            <li><strong>Recomendación:</strong> Implementar redundancia adicional en componentes críticos</li>
+                            <li><strong>Impacto en el Negocio:</strong> Conectividad confiable que soporta operaciones remotas e híbridas</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-section info">
+                        <h4>
+                            <i class="fas fa-shield-alt"></i>
+                            Análisis de Ciberseguridad
+                        </h4>
+                        <ul>
+                            <li><strong>Fortalezas:</strong> Cero incidentes críticos y 2,847 amenazas bloqueadas exitosamente</li>
+                            <li><strong>Oportunidades:</strong> Fortalecer capacitación en concientización de seguridad</li>
+                            <li><strong>Recomendación:</strong> Buscar certificación ISO 27001 para validar postura de seguridad</li>
+                            <li><strong>Impacto en el Negocio:</strong> Protección integral de activos digitales y continuidad operacional</li>
+                        </ul>
+                    </div>
+
+                    <!-- Conclusiones Estratégicas -->
+                    <div class="summary-section success">
+                        <h4>
+                            <i class="fas fa-bullseye"></i>
+                            Conclusiones Estratégicas Clave
+                        </h4>
+                        <ul>
+                            <li><strong>Excelencia Operacional:</strong> Infraestructura estabilizada con 97% de sistemas actualizados y mantenimientos preventivos implementados</li>
+                            <li><strong>Gestión Proactiva de Riesgos:</strong> Mitigación exitosa del riesgo crítico de almacenamiento - Expansión de 47TB a 61TB completada</li>
+                            <li><strong>Mantenimiento de Clase Mundial:</strong> Programa integral con documentación completa, limpieza 3x/semana y climatización óptima</li>
+                            <li><strong>Seguridad Robusta:</strong> 8 ciclos de actualizaciones completados Ene-Sep, superando estándares industriales de 6 ciclos anuales</li>
+                            <li><strong>Habilitación Digital:</strong> 85% adopción VPN para trabajo híbrido y 95% disponibilidad de climatización crítica</li>
+                            <li><strong>Preparación Futura:</strong> Ventana de 6 meses asegurada para modernización definitiva con riesgos controlados</li>
+                        </ul>
+                    </div>
+
+                    <!-- Recomendaciones Prioritarias -->
+                    <div class="summary-section success">
+                        <h4>
+                            <i class="fas fa-tasks"></i>
+                            Cronograma de Implementación - Estado Actual
+                        </h4>
+                        <ul>
+                            <li><strong>✅ COMPLETADO:</strong> Disco 14TB instalado - Almacenamiento expandido 47TB→61TB, uso optimizado al 62%</li>
+                            <li><strong>✅ COMPLETADO:</strong> RFP switches finalizado y entregado - 19 switches HP en proceso de adquisición</li>
+                            <li><strong>✅ PROGRAMADO:</strong> Mantenimiento 2 UPS críticas confirmado 8-9 Sep - Cronograma Q4 establecido</li>
+                            <li><strong>EN PROGRESO:</strong> Programa de mantenimientos preventivos activo - Pisos 2, 4, 5 documentados</li>
+                            <li><strong>Q1 2025:</strong> Modernización definitiva de infraestructura con base sólida establecida</li>
+                            <li><strong>RESULTADO:</strong> Riesgos críticos eliminados, operación estabilizada, ventana de 6 meses asegurada</li>
+                        </ul>
+                    </div>
+
+                    <!-- Proyección y Visión -->
+                    <div class="summary-section success">
+                        <h4>
+                            <i class="fas fa-crystal-ball"></i>
+                            Proyección y Visión 2025-2026
+                        </h4>
+                        <ul>
+                            <li><strong>Transformación Digital:</strong> Posicionamiento como líder en adopción de tecnologías emergentes (IA, ML, IoT)</li>
+                            <li><strong>Eficiencia Operacional:</strong> Automatización del 60% de procesos rutinarios mediante RPA y AI</li>
+                            <li><strong>Experiencia del Usuario:</strong> Implementación de interfaces intuitivas y self-service para reducir tickets en 30%</li>
+                            <li><strong>Sostenibilidad:</strong> Migración completa a infraestructura verde con optimización del consumo energético</li>
+                            <li><strong>Agilidad Empresarial:</strong> Capacidad de respuesta a cambios del mercado en menos de 48 horas</li>
+                        </ul>
+                    </div>
+
+                    <!-- Métricas de Éxito -->
+                    <div class="summary-section info">
+                        <h4>
+                            <i class="fas fa-trophy"></i>
+                            Métricas de Éxito Consolidadas - Datos Actuales
+                        </h4>
+                        <ul>
+                            <li><strong>Almacenamiento Optimizado:</strong> 62% de uso (38/61 TB) - Riesgo crítico eliminado con expansión 14TB</li>
+                            <li><strong>Seguridad Excepcional:</strong> 97% servidores actualizados (33/34) - 8 ciclos parches vs 6 estándar industrial</li>
+                            <li><strong>Mantenimiento Preventivo:</strong> 95% aires con mantenimiento (36/38) - Ambiente controlado 99.2% tiempo</li>
+                            <li><strong>Conectividad Empresarial:</strong> 85% usuarios VPN activos (308/363) - Trabajo híbrido habilitado</li>
+                            <li><strong>Documentación Completa:</strong> 100% switches documentados - Pisos 2, 4, 5 con trazabilidad total</li>
+                            <li><strong>Gestión de Riesgos:</strong> Cero incidentes críticos - Programa de limpieza 3x/semana implementado</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Initialize timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            };
+            document.getElementById('currentTimestamp').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        // Navigation functionality
+        function showSection(sectionName) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => section.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById(sectionName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Initialize charts for the section
+            setTimeout(() => {
+                initializeCharts(sectionName);
+            }, 100);
+        }
+
+        // Chart initialization
+        function initializeCharts(section) {
+            switch(section) {
+                case 'infrastructure':
+                    createResourceUsageChart();
+                    createEquipmentStatusChart();
+                    break;
+                case 'powerbi':
+                    createPowerBIImpactChart();
+                    break;
+                case 'development':
+                    createDevelopmentChart();
+                    createSupportCasesChart();
+                    break;
+                case 'networks':
+                    createNetworksChart();
+                    break;
+                case 'security':
+                    createSecurityChart();
+                    break;
+                case 'conclusions':
+                    // No charts needed for conclusions section
+                    break;
+            }
+        }
+
+        // Chart creation functions
+        function createResourceUsageChart() {
+            const ctx = document.getElementById('resourceUsageChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Almacenamiento', 'Servidores', 'UPS', 'Aires', 'VPN', 'Red'],
+                    datasets: [{
+                        label: 'Uso/Estado (%)',
+                        data: [62, 97, 58, 95, 85, 33],
+                        backgroundColor: [
+                            '#f39c12', // Storage - Warning (62% post-expansion)
+                            '#2ecc71', // Servers - Good but 1 pending
+                            '#f39c12', // UPS - Warning
+                            '#2ecc71', // AC - Good
+                            '#2ecc71', // VPN - Good
+                            '#e74c3c'  // Network - Critical
+                        ],
+                        borderWidth: 1,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const labels = [
+                                        'Almacenamiento: 62% usado (38/61 TB) - MITIGADO con disco 14TB',
+                                        'Parches Seguridad: 97% aplicados (33/34) - 8 ciclos Ene-Sep',
+                                        'UPS: 58% con mantenimiento (7/12) - 2 programadas 8-9 Sep',
+                                        'Aires: 95% con mantenimiento (36/38)',
+                                        'VPN: 85% usuarios activos (308/363)',
+                                        'Red: 33% equipos OK (21/64) - RFP switches listo 15 Sep'
+                                    ];
+                                    return labels[context.dataIndex];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createEquipmentStatusChart() {
+            const ctx = document.getElementById('equipmentStatusChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Operativo', 'En Riesgo', 'Pendiente', 'Crítico'],
+                    datasets: [{
+                        data: [45, 25, 15, 15],
+                        backgroundColor: ['#2ecc71', '#f39c12', '#3498db', '#e74c3c'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const labels = [
+                                        'Operativo: Sistemas funcionando correctamente',
+                                        'En Riesgo: Equipos antiguos que requieren atención',
+                                        'Pendiente: Mantenimientos y actualizaciones programadas',
+                                        'Crítico: Requiere acción inmediata'
+                                    ];
+                                    return labels[context.dataIndex];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createOverviewChart() {
+            const ctx = document.getElementById('overviewChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Disponibilidad del Sistema (%)',
+                        data: [99.2, 99.5, 99.1, 99.8, 99.4, 99.9],
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Satisfacción del Usuario (%)',
+                        data: [92, 94, 91, 95, 93, 96],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 85,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function createResourceChart() {
+            const ctx = document.getElementById('resourceChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Infraestructura', 'Desarrollo', 'Seguridad', 'Operaciones', 'Capacitación'],
+                    datasets: [{
+                        data: [35, 25, 20, 15, 5],
+                        backgroundColor: ['#3498db', '#9b59b6', '#2ecc71', '#f39c12', '#e74c3c']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createInfrastructureChart() {
+            const ctx = document.getElementById('infrastructureChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['CPU', 'Memory', 'Storage', 'Network'],
+                    datasets: [{
+                        label: 'Utilization (%)',
+                        data: [87, 72, 65, 45],
+                        backgroundColor: ['#e74c3c', '#f39c12', '#2ecc71', '#3498db']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDevelopmentChart() {
+            const ctx = document.getElementById('developmentChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completados', 'En Desarrollo', 'Pendientes'],
+                    datasets: [{
+                        data: [6, 1, 1],
+                        backgroundColor: ['#2ecc71', '#3498db', '#f39c12'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12,
+                                    weight: '600'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#093866',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    const labels = [
+                                        `6 proyectos completados (75%)`,
+                                        `1 proyecto en desarrollo activo`,
+                                        `1 proyecto pendiente de inicio`
+                                    ];
+                                    return [
+                                        `${value} proyectos`,
+                                        `${percentage}% del total`,
+                                        labels[context.dataIndex]
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        function createSupportCasesChart() {
+            const ctx = document.getElementById('supportCasesChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Digital', 'Aurora-Apple', 'Facturación Electrónica', 'Otros'],
+                    datasets: [{
+                        data: [200, 25, 13, 12],
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(155, 89, 182, 0.8)', 
+                            'rgba(243, 156, 18, 0.8)',
+                            'rgba(149, 165, 166, 0.8)'
+                        ],
+                        borderColor: [
+                            '#3498db',
+                            '#9b59b6',
+                            '#f39c12', 
+                            '#95a5a6'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: false 
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#093866',
+                            borderWidth: 1,
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                label: function(context) {
+                                    const value = context.parsed;
+                                    const percentage = ((value / 250) * 100).toFixed(1);
+                                    const descriptions = [
+                                        'Sistema principal más utilizado',
+                                        '5 casos exitosos resueltos',
+                                        'Sistema crítico fiscal - Mejoras implementadas',
+                                        'Sistemas auxiliares diversos'
+                                    ];
+                                    return [
+                                        `${value} casos`,
+                                        `${percentage}% del total`,
+                                        descriptions[context.dataIndex]
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+
+
+        function createPowerBIImpactChart() {
+            const ctx = document.getElementById('powerbiImpactChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Contabilidad', 'Despachos', 'Talento Humano', 'Otras Áreas'],
+                    datasets: [{
+                        label: 'Horas Ahorradas/Mes',
+                        data: [616, 240, 138, 222],
+                        backgroundColor: [
+                            'rgba(46, 204, 113, 0.8)',
+                            'rgba(52, 152, 219, 0.8)', 
+                            'rgba(155, 89, 182, 0.8)',
+                            'rgba(149, 165, 166, 0.8)'
+                        ],
+                        borderColor: [
+                            '#2ecc71',
+                            '#3498db',
+                            '#9b59b6', 
+                            '#95a5a6'
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: false 
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#093866',
+                            borderWidth: 1,
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    const percentage = ((value / 1216) * 100).toFixed(1);
+                                    const employees = (value / 160).toFixed(1);
+                                    return [
+                                        `${value} horas/mes`,
+                                        `${percentage}% del total`,
+                                        `${employees} empleados equiv.`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 700,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: { 
+                                font: { size: 11, weight: '500' },
+                                color: '#093866',
+                                callback: function(value) {
+                                    return value + 'h';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: { 
+                                font: { size: 11, weight: '600' },
+                                color: '#011E3C',
+                                maxRotation: 0
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        function createNetworksChart() {
+            const ctx = document.getElementById('networksChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                    datasets: [{
+                        label: 'Tráfico de Red (Mbps)',
+                        data: [120, 80, 450, 680, 520, 280],
+                        borderColor: '#093866',
+                        backgroundColor: 'rgba(9, 56, 102, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function createSecurityChart() {
+            const ctx = document.getElementById('securityChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Malware', 'Phishing', 'Spam', 'Intentos de Intrusión', 'Otros'],
+                    datasets: [{
+                        data: [45, 25, 15, 10, 5],
+                        backgroundColor: ['#e74c3c', '#f39c12', '#2ecc71', '#3498db', '#9b59b6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createOperationsChart() {
+            const ctx = document.getElementById('operationsChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Tickets Created',
+                        data: [320, 285, 310, 295],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Tickets Resolved',
+                        data: [315, 290, 305, 300],
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                initializeCharts('infrastructure');
+            }, 500);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97bba041a12b0ce3',t:'MTc1NzMwNDk0MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
